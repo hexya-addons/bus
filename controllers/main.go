@@ -22,9 +22,11 @@ var log logging.Logger
 // A Poller is a long poll dispatching loop
 type Poller interface {
 	// Poll returns the pending notification on the given channels since the last retrieved id.
-	Poll([]string, int64, types.Context) []*bustypes.Notification
+	Poll([]string, int64, *types.Context) []*bustypes.Notification
 	// Stop the dispatching loop
 	Stop()
+	// Start the dispatching loop
+	Start()
 }
 
 // Send is the endpoint for sending a message from client side
@@ -51,6 +53,9 @@ func Poll(c *server.Context) {
 		return
 	}
 	// Update the user presence
+	if params.Options == nil {
+		params.Options = types.NewContext()
+	}
 	if params.Options.HasKey("bus_inactivity") {
 		models.ExecuteInNewEnvironment(uid, func(env models.Environment) {
 			h.BusPresence().NewSet(env).Update(time.Duration(params.Options.GetInteger("bus_inactivity")) * time.Millisecond)

@@ -19,7 +19,10 @@ import (
 	"github.com/lib/pq"
 )
 
-var timeout = 50 * time.Second
+const (
+	loopSleepOnError = 5 * time.Second
+	defaultTimeout   = 50 * time.Second
+)
 
 var fields_BusBus = map[string]models.FieldDefinition{
 	"Channel": fields.Char{},
@@ -28,7 +31,7 @@ var fields_BusBus = map[string]models.FieldDefinition{
 
 // Gc garbage collects expired notifications, that is notifications that are older than 2 timeouts.
 func busBus_Gc(rs m.BusBusSet) int64 {
-	timeoutAgo := dates.Now().Add(-2 * timeout)
+	timeoutAgo := dates.Now().Add(-2 * defaultTimeout)
 	return h.BusBus().NewSet(rs.Env()).Sudo().Search(q.BusBus().CreateDate().Lower(timeoutAgo)).Unlink()
 }
 
@@ -76,11 +79,11 @@ func busBus_Sendone(rs m.BusBusSet, channel string, message interface{}) {
 }
 
 // Poll returns pending notifications on the given channels
-func busBus_Poll(rs m.BusBusSet, channels []string, last int64, options types.Context, force_status bool) []*bustypes.Notification {
+func busBus_Poll(rs m.BusBusSet, channels []string, last int64, options *types.Context, force_status bool) []*bustypes.Notification {
 	cond := q.BusBus().ID().Greater(last)
 	if last == 0 {
 		// We do not have info about last unread ID, so we send back all messages during the last timeout
-		timeoutAgo := dates.Now().Add(-timeout)
+		timeoutAgo := dates.Now().Add(-defaultTimeout)
 		cond = q.BusBus().CreateDate().Greater(timeoutAgo)
 	}
 	cond = cond.And().Channel().In(channels)
@@ -121,15 +124,16 @@ func busBus_Poll(rs m.BusBusSet, channels []string, last int64, options types.Co
 type busDispatcher struct {
 	sync.RWMutex
 	topics   map[string]map[chan bool]bool
-	started  bool
 	stopChan chan struct{}
 }
 
 // newBusDispatcher returns a pointer to a new instance of busDispatcher
 func newBusDispatcher() *busDispatcher {
 	bd := busDispatcher{
-		topics: make(map[string]map[chan bool]bool),
+		topics:   make(map[string]map[chan bool]bool),
+		stopChan: make(chan struct{}),
 	}
+	close(bd.stopChan)
 	return &bd
 }
 
@@ -167,7 +171,7 @@ func (bd *busDispatcher) removeChannel(topic string, ch chan bool) {
 }
 
 // Poll returns the pending notification on the given channels since the last retrieved id.
-func (bd *busDispatcher) Poll(channels []string, last int64, options types.Context) []*bustypes.Notification {
+func (bd *busDispatcher) Poll(channels []string, last int64, options *types.Context) []*bustypes.Notification {
 	var notifications []*bustypes.Notification
 	models.ExecuteInNewEnvironment(security.SuperUserID, func(env models.Environment) {
 		notifications = h.BusBus().NewSet(env).Poll(channels, last, options, false)
@@ -175,11 +179,11 @@ func (bd *busDispatcher) Poll(channels []string, last int64, options types.Conte
 	if options.GetBool("peek") {
 		return notifications
 	}
+	timeout := defaultTimeout
+	if options.HasKey("timeout") {
+		timeout = time.Duration(options.GetInteger("timeout")) * time.Second
+	}
 	if len(notifications) == 0 {
-		if !bd.started {
-			// Lazy start of events listener
-			bd.start()
-		}
 		notifyChan := make(chan bool)
 		for _, channel := range channels {
 			bd.addChannel(channel, notifyChan)
@@ -200,7 +204,8 @@ func (bd *busDispatcher) Poll(channels []string, last int64, options types.Conte
 }
 
 // loop dispatches DB notifications to the relevant polling goroutine
-func (bd *busDispatcher) loop() {
+// Returns true if this is a normal stop.
+func (bd *busDispatcher) loop(stopChan chan struct{}) bool {
 	connStr := models.DBParams().ConnectionString()
 	reportProblem := func(ev pq.ListenerEventType, err error) {
 		if err != nil {
@@ -212,7 +217,7 @@ func (bd *busDispatcher) loop() {
 	err := l.Listen("imbus")
 	if err != nil {
 		log.Warn("error when starting listen imbus", "error", err)
-		return
+		return false
 	}
 	for {
 		select {
@@ -225,46 +230,47 @@ func (bd *busDispatcher) loop() {
 			err := json.Unmarshal([]byte(notification.Extra), &topics)
 			if err != nil {
 				log.Warn("error when reading topics", "error", err)
-				return
+				return false
 			}
 			for _, ch := range bd.channels(topics) {
 				go func(c chan bool) {
 					c <- true
 				}(ch)
 			}
-		case <-time.After(timeout):
-		case <-bd.stopChan:
-			return
+		case <-time.After(defaultTimeout):
+		case <-stopChan:
+			return true
 		}
 	}
 }
 
 // run starts the loop, restarting it when it fails
-func (bd *busDispatcher) run() {
+func (bd *busDispatcher) run(stopChan chan struct{}) {
 	for {
-		bd.loop()
-		log.Warn("Bus.loop error, sleep and retry")
-		select {
-		case <-time.After(timeout):
-		case <-bd.stopChan:
+		ok := bd.loop(stopChan)
+		if ok {
 			return
 		}
+		log.Warn("Bus.loop error, sleep and retry")
+		time.Sleep(loopSleepOnError)
 	}
 }
 
-// start the bus dispatcher loop in its own goroutine
-func (bd *busDispatcher) start() {
-	bd.started = true
-	bd.stopChan = make(chan struct{})
-	go bd.run()
+// Start the bus dispatcher loop in its own goroutine
+func (bd *busDispatcher) Start() {
+	select {
+	case <-bd.stopChan:
+		bd.stopChan = make(chan struct{})
+		go bd.run(bd.stopChan)
+	default:
+		log.Warn("Bus.loop already started")
+		return
+	}
 }
 
 // Stop the busDispatcher loop
 func (bd *busDispatcher) Stop() {
-	if bd.started {
-		close(bd.stopChan)
-		bd.started = false
-	}
+	close(bd.stopChan)
 }
 
 func init() {

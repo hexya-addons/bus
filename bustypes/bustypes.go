@@ -15,9 +15,9 @@ type Notification struct {
 
 // PollParams are the parameters of a long poll
 type PollParams struct {
-	Channels []string      `json:"channels"`
-	Last     int64         `json:"last"`
-	Options  types.Context `json:"options"`
+	Channels []string       `json:"channels"`
+	Last     int64          `json:"last"`
+	Options  *types.Context `json:"options"`
 }
 
 // An IMSearchResult is returned by Partner's IMSearch method

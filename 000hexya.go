@@ -2,7 +2,7 @@ package bus
 
 import (
 	_ "github.com/hexya-addons/base"
-	_ "github.com/hexya-addons/bus/controllers"
+	"github.com/hexya-addons/bus/controllers"
 	_ "github.com/hexya-addons/web"
 	"github.com/hexya-erp/hexya/src/server"
 	"github.com/hexya-erp/hexya/src/tools/logging"
@@ -15,8 +15,10 @@ var log logging.Logger
 func init() {
 	log = logging.GetLogger("bus")
 	server.RegisterModule(&server.Module{
-		Name:     MODULE_NAME,
-		PreInit:  func() {},
-		PostInit: func() {},
+		Name:    MODULE_NAME,
+		PreInit: func() {},
+		PostInit: func() {
+			controllers.Dispatcher.Start()
+		},
 	})
 }

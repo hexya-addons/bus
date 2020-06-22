@@ -94,10 +94,14 @@ github.com/hexya-addons/web v0.1.5 h1:Il8ew+cVnSMlbTrmuXxQLeb1LS0F+iLNWY2Z0Ry3FY
 github.com/hexya-addons/web v0.1.5/go.mod h1:t9IQacVbC1JmRKWn0GlCG9G6ePCcd8r/eQf/0tjWhqA=
 github.com/hexya-addons/web v0.1.6 h1:qNR6HH+QKdxbyBQ6frM7YfajkxRu923uqMhLZ0LVYLI=
 github.com/hexya-addons/web v0.1.6/go.mod h1:aFDrXAWUCHx3tum29z3FnwdcnFeXQZs2qhlrQyZctDU=
+github.com/hexya-addons/web v0.1.7 h1:8gw5jMp9JWLxW9KVeq+EyNkjuyql9NhfXkYNGbNivMw=
+github.com/hexya-addons/web v0.1.7/go.mod h1:xXiNy+SSjSlthAOSceAZ79tqp7PDCCDH7PhKIFRfDsQ=
 github.com/hexya-erp/hexya v0.1.5 h1:+1185t1T07WMGUFQesvc/GDV/3ll7zmCvlQm+0UptJo=
 github.com/hexya-erp/hexya v0.1.5/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
 github.com/hexya-erp/hexya v0.1.6 h1:+x4E2F06kabD9P5ZIbrkjV65vycRkQEMzV8Pz9bA4e0=
 github.com/hexya-erp/hexya v0.1.6/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
+github.com/hexya-erp/hexya v0.1.7 h1:hzXCNyv6N+GmqYCcnrOBaoa8k2oUXckCxWJW9hQ7NkA=
+github.com/hexya-erp/hexya v0.1.7/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
 github.com/hexya-erp/hexya-addons v0.0.0-20181115154804-6cbbd6b66d29 h1:rCxPcFfpTf8UJN8GiHl3/ilDPTw6B9tMFhBTMukctiU=
 github.com/hexya-erp/pool v1.0.2 h1:T2XNgink3bnFK5I8ae2hyFGAI0e2AF/GUWVwe7q8d5Q=
 github.com/hexya-erp/pool v1.0.2/go.mod h1:DucbMZy2Dy4JSDgyYR8PIi8wgSmH1E6VV1dJE6WKRY8=

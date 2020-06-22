@@ -14,7 +14,7 @@ import (
 
 const awayTimer = 30 * time.Minute
 
-var disconnectionTimer = timeout + 5*time.Second
+var disconnectionTimer = defaultTimeout + 5*time.Second
 
 /* User Presence
 Its status is 'online', 'away' or 'offline'. This model is not
